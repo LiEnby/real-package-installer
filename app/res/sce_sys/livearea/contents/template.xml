@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<livearea style="a1" format-ver="01.00" content-rev="1">
+	<livearea-background>
+		<image>bg.png</image>
+	</livearea-background>
+	<title color="#ffffff80"/>
+
+	<frame id="frame3">
+		<lang>en</lang>
+		<liveitem>
+			<text align="outside-right" line-break="on" line-space="3" margin-left="10" margin-top="10" text-valign="center" valign="bottom">
+				<str color="#ffffff" size="32" ><b>RealPackage Installer</b></str>
+			</text>
+		</liveitem>
+	</frame>
+
+</livearea>
+

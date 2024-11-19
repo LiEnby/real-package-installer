@@ -1,0 +1,18 @@
+real_pkg_installer_helper:
+  attributes: 0
+  version:
+    major: 1
+    minor: 5
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    libPkgInstaller:
+      syscall: true
+      functions:
+        - EnableDevPackages
+        - EnableFPkgInstallerQAF
+        - DisableDevPackages
+        - DisableFPkgInstallerQAF
+        - SetHost0PackageDir
+        - UnsetHost0PackageDir
