@@ -28,15 +28,11 @@ void handle_main_menu_option() {
 				EnableFPkgInstallerQAF();
 				
 				// run pkg installer
-				int res = sceAppMgrLaunchAppByName(0x60000, "NPXS10031", NULL);
-				if(res >= 0) {
-					sceKernelDelayThread(1000 * 3);					
-				}
-				else {
-					DisableFPkgInstallerQAF();
-					UnsetHost0PackageDir();					
-				}
+				sceAppMgrLaunchAppByName(0x60000, "NPXS10031", NULL);
+				sceKernelDelayThread(1000 * 10);
 				
+				DisableFPkgInstallerQAF();
+				UnsetHost0PackageDir();	
 				DisableDevPackages();				
 				break;
 			default:
