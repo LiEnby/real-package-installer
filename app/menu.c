@@ -3,6 +3,7 @@
 #include "ctrl.h"
 #include "log.h"
 #include "io.h"
+#include "pkg.h"
 
 #include <string.h>
 #include <stdio.h>
@@ -11,6 +12,8 @@
 #include <stdint.h>
 
 static uint8_t options[0x1000];
+
+#define WINDOW_SIZE (20)
 
 #define DEFOPT(y) int option = 0;\
 				  int opt_y = y; \
@@ -32,7 +35,6 @@ static uint8_t options[0x1000];
 #define RETURNOPT() return option
 #define CALC_FIRST_OPTION() for(first_option = 0; (options[first_option] != 1 && first_option < sizeof(options)); first_option++)
 #define CALC_LAST_OPTION() for(last_option = sizeof(options); (options[last_option] != 1 && last_option > 0); last_option--)
-#define WINDOW_SIZE (20)
 #define PROCESS_MENU(func, ...) \
 					  int window = 0; \
 					  int selected = 0; \
@@ -85,18 +87,29 @@ static uint8_t options[0x1000];
 
 
 
+#define draw_text_center_format(y, format, ...) \
+do{ \
+	txt_format(format, __VA_ARGS__); \
+	draw_text_center(y, txt); \
+}while(0);
+
+#define draw_title_format(title, ...) \
+do{ \
+	txt_format(title, __VA_ARGS__); \
+	draw_title(txt); \
+}while(0);
 
 int draw_main_menu(int* selected, int* window, ...) {
 	start_draw();
 	draw_background();
 
-	draw_title("Real Package Installer 3.0");
+	draw_title("Real Package Installer");
 	
 	DEFOPT(200);
 
 	ADDOPT(1, "Install NpDrm-Bind Package");
 	ADDOPT(1, "Install NpDrm-Free Package");
-	ADDOPT(1, "Launch fake_package_installer (NPXS10031)");
+	ADDOPT(1, "Launch Sony ★Package Installer (NPXS10031)");
 	
 	end_draw();
 	
@@ -119,9 +132,7 @@ int draw_select_file(int* selected, int* window, char* input_folder, char* folde
 	start_draw();
 	draw_background();
 	
-	char title[128];
-	snprintf(title, sizeof(title), "Select a file from: %.15s ...", input_folder);
-	draw_title(title);
+	draw_title_format("Select a file from: %s ...", input_folder);
 	
 	DEFOPT(110);
 
@@ -135,13 +146,24 @@ int draw_select_file(int* selected, int* window, char* input_folder, char* folde
 		if(i >= total_files) break;
 		
 		char file[MAX_PATH];
-		snprintf(file, sizeof(file), "%.45s", folders + (i * MAX_PATH));
+		snprintf(file, sizeof(file), "%.50s", folders + (i * MAX_PATH));
 		ADDOPT(1, file);
 	}
 	
 	end_draw();
 	
 	RETURNOPT();		
+}
+
+void draw_package_decrypt(char* package, uint64_t done, uint64_t total) {
+	start_draw();
+	draw_background();
+	draw_title_format("Installing package %s ...", package);
+	
+	draw_text_center_format(200, "Expand package %s", package);
+	draw_progress_bar(230, done, total);
+
+	end_draw();
 }
 
 int do_select_file(char* folder, char* output, char* extension, uint64_t max_size) {
@@ -165,6 +187,15 @@ int do_select_file(char* folder, char* output, char* extension, uint64_t max_siz
 	PROCESS_MENU(draw_select_file, folder, files, total_files);
 	strncpy(output, files + (selected * MAX_PATH), MAX_PATH);	
 	return selected;	
+}
+
+int do_package_decrypt(char* package) {
+	PRINT_STR("do_package_decrypt\n");
+	sceIoMkdir("ux0:/temp", 0777);
+	sceIoMkdir("ux0:/temp/game", 0777);
+
+	int res = expand_package(package, "ux0:/temp/game", draw_package_decrypt);
+	return res;
 }
 
 void do_confirm_message(char* title, char* msg) {

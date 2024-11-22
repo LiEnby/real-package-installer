@@ -20,7 +20,7 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
 set(VITA_MKSFOEX_FLAGS "${VITA_MKSFOEX_FLAGS} -s CATEGORY=gdb")
-set(VITA_MAKE_FSELF_FLAGS "${VITA_MAKE_FSELF_FLAGS} -a 0x2800000000000026")
+set(VITA_MAKE_FSELF_FLAGS "${VITA_MAKE_FSELF_FLAGS} -a 0x280000000000002E")
 
 include_directories(
 )
@@ -36,17 +36,25 @@ add_executable(${PROJECT_NAME}
 	io.c
 	main.c
 	menu.c
+	pkg.c
 	bgm.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}
 	vita2d
+	soloud
+	pthread
+	stdc++
+	freetype
+	png
+	jpeg
+	m
+	z
+
 	real_pkg_installer_helper_stub
 	taihen_stub
 
-	SceSysmodule_stub
-	SceNet_stub
-	SceNetCtl_stub_weak
+	SceNpDrm_stub
 	SceDisplay_stub
 	SceGxm_stub
 	ScePgf_stub
@@ -58,20 +66,8 @@ target_link_libraries(${PROJECT_NAME}
 	SceAppUtil_stub
 	SceIofilemgr_stub
 	ScePower_stub
-	SceRegistryMgr_stub
 	SceShellSvc_stub
-	SceAppUtil_stub
-	SceIme_stub
-	SceAudio_stub
-
-	soloud
-	pthread
-	stdc++
-	freetype
-	png
-	jpeg
-	m
-	z
+	SceAudio_stub	
 )
 
 vita_create_self(eboot.bin ${PROJECT_NAME} UNSAFE)

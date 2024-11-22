@@ -7,10 +7,9 @@
 	<title color="#ffffff80"/>
 
 	<frame id="frame3">
-		<lang>en</lang>
 		<liveitem>
-			<text align="outside-right" line-break="on" line-space="3" margin-left="10" margin-top="10" text-valign="center" valign="bottom">
-				<str color="#ffffff" size="32" ><b>RealPackage Installer</b></str>
+			<text align="center" valign="center" origin="frame">
+				<str color="#ffffff" size="32" bold="on">RealPackage Installer</str>
 			</text>
 		</liveitem>
 	</frame>

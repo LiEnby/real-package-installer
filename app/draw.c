@@ -11,6 +11,15 @@ static vita2d_pvf *pvf;
 static vita2d_texture *background;
 static vita2d_texture *menuoverlay;
 
+int get_text_center_x(char* msg) {
+	float size = 1.0f;
+	int text_width = 0;
+	int text_height = 0;
+	vita2d_pgf_text_dimensions(pgf, size, msg, &text_width, &text_height);
+	int text_x = MENUOVERLAY_POS_X + (((MENUOVERLAY_WIDTH)/2) - (text_width/2));
+	return text_x;	
+}
+
 
 void init_vita2d() {
 	vita2d_init();
@@ -33,9 +42,25 @@ void term_vita2d() {
 	vita2d_free_texture(menuoverlay);
 }
 
+void draw_text_color(int x, int y, char* msg, int color) {
+	float size = 1.0f;
+	vita2d_pgf_draw_text(pgf, x, y, color, size, msg);
+}
+
 void draw_text(int x, int y, char* msg) {
 	float size = 1.0f;
 	vita2d_pgf_draw_text(pgf, x, y, COLOR_WHITE, size, msg);
+}
+
+
+void draw_text_center_color(int y, char* msg, int color) {
+	int center_x = get_text_center_x(msg);
+	draw_text_color(center_x, y, msg, color);
+}
+
+void draw_text_center(int y, char* msg) {
+	int center_x = get_text_center_x(msg);
+	draw_text(center_x, y, msg);
 }
 
 void draw_progress_bar(int y, uint64_t done, uint64_t total) {
@@ -50,14 +75,6 @@ void draw_progress_bar(int y, uint64_t done, uint64_t total) {
 
 }
 
-void draw_text_center(int y, char* msg) {
-	float size = 1.0f;
-	int text_width = 0;
-	int text_height = 0;
-	vita2d_pgf_text_dimensions(pgf, size, msg, &text_width, &text_height);
-	int text_x = MENUOVERLAY_POS_X + (((MENUOVERLAY_WIDTH)/2) - (text_width/2));
-	draw_text(text_x, y, msg);
-}
 
 void draw_option(int y, char* opt, int selected) {
 	char option_text[512];
@@ -66,7 +83,7 @@ void draw_option(int y, char* opt, int selected) {
 	else
 		snprintf(option_text, sizeof(option_text), "> %s <", opt);
 	
-	draw_text_center(y, option_text);
+	draw_text_center_color(y, option_text, selected ? COLOR_ORANGE : COLOR_WHITE);
 }
 
 void draw_title(char* title) {

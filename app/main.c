@@ -11,6 +11,37 @@
 #include "bgm.h"
 #include "log.h"
 #include "fpkg.h"
+#include "io.h"
+
+#define PKG_INSTALL_LOCATION ("ux0:/package")
+
+
+void handle_install_package(char* package) {
+
+	
+	PRINT_STR("install package: %s\n", package);
+	EnableDevPackages();
+	do_package_decrypt(package);
+	DisableDevPackages();
+}
+
+void handle_select_npdrmfree_package() {
+	char output[MAX_PATH];
+	int selected = -1;
+	while(selected < 0) {
+		selected = do_select_file(PKG_INSTALL_LOCATION, output, ".pkg", (uint64_t)-1);
+		
+		if(selected < 0) {
+			do_confirm_message_format("No files found!", "There were no PKG files found in %s", PKG_INSTALL_LOCATION)
+			return;
+		}
+	}
+	char full_output_path[MAX_PATH*2];
+	snprintf(full_output_path, sizeof(full_output_path), "%s/%s", PKG_INSTALL_LOCATION, output);
+	
+	handle_install_package(full_output_path);	
+	
+}
 
 void handle_main_menu_option() {
 	
@@ -21,15 +52,16 @@ void handle_main_menu_option() {
 			case INSTALL_NPDRM_BIND_PACKAGE:
 				break;
 			case INSTALL_NPDRM_FREE_PACKAGE:
+				handle_select_npdrmfree_package();
 				break;
 			case LAUNCH_FAKE_PKG_INSTALLER:
 				EnableDevPackages();
-				SetHost0PackageDir("ux0:/package");
+				SetHost0PackageDir(PKG_INSTALL_LOCATION);
 				EnableFPkgInstallerQAF();
 				
 				// run pkg installer
 				sceAppMgrLaunchAppByName(0x60000, "NPXS10031", NULL);
-				sceKernelDelayThread(1000 * 10);
+				sceKernelDelayThread(1000 * 1000 * 10);
 				
 				DisableFPkgInstallerQAF();
 				UnsetHost0PackageDir();	
