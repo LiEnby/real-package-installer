@@ -10,13 +10,11 @@ typedef struct SearchFilter {
 } SearchFilter;
 
 int file_exist(char* path);
-void remove_illegal_chars(char* str);
-
-
+int write_file(const char* path, const char* data, size_t size);
 uint64_t get_file_size(const char* filepath);
+
 uint64_t get_free_space(const char* device);
 int read_first_filename(char* path, char* output, size_t out_size);
-
 int get_files_in_folder(char* folder, char* out_filenames, int* total_folders, SearchFilter* filter, size_t max_files);
 
 #endif

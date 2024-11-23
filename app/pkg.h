@@ -71,7 +71,7 @@ typedef enum PKG_METADATA_TYPE {
 	PKG_META_DRM_TYPE = 0x1,
 	PKG_META_CONTENT_TYPE = 0x2,
 	PKG_META_PACKAGE_FLAGS = 0x3,
-	PKG_META_FILE_INDEX_INFO = 0xD,
+	PKG_META_FILE_ITEM_INFO = 0xD,
 	PKG_META_SFO = 0xE
 } PKG_METADATA_TYPE;
 
@@ -98,7 +98,11 @@ typedef struct pkg_state {
 	PKG_ITEM_RECORD pkgItem;
 } pkg_state;
 
+int get_tail_bin(pkg_state* state, const char* outfile);
+int get_head_bin(pkg_state* state, const char* outfile);
+int extract_file(pkg_state* state, const char* outfile);
 
-int expand_package(char* pkg_file, char* out_folder, void (*progress_callback)(char*, uint64_t, uint64_t));
+
+int expand_package(const char* pkg_file, const char* out_folder, void (*progress_callback)(const char*, uint64_t, uint64_t));
 
 #endif

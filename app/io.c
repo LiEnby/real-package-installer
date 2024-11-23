@@ -101,28 +101,7 @@ error:
 	return ret;	
 }
 
-void remove_illegal_chars(char* str) {
-	// remove illegal characters from file name
-	int slen = strlen(str);
-	for(int i = 0; i < slen; i++) {
-		if(str[i] == '/' ||
-		str[i] == '\\' ||
-		str[i] == ':' ||
-		str[i] == '?' ||
-		str[i] == '*' ||
-		str[i] == '"' ||
-		str[i] == '|' ||
-		str[i] == '>' ||
-		str[i] == '\n' ||
-		str[i] == '\r' ||
-		str[i] == '<')
-			str[i] = ' ';		
-	}
-}
-
-
 uint64_t get_free_space(const char* device) {
-	uint64_t max_size = 0;
 	uint64_t free_space = 0;
 	 
 	// host0 will always report as 0 bytes free
@@ -138,4 +117,20 @@ uint64_t get_free_space(const char* device) {
 	}
 	
 	return free_space;
+}
+
+int write_file(const char* path, const char* data, size_t size) {
+	
+	int ret = 0;
+	SceUID wfd = sceIoOpen(path, SCE_O_WRONLY | SCE_O_CREAT, 0777);
+	if(wfd > 0) {
+		ret = sceIoWrite(wfd, data, size);
+		if(ret < 0) goto error;
+		if(ret != size) ERROR(-1);
+	}
+	
+error:
+	sceIoClose(wfd);
+	return ret;
+	
 }

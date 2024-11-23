@@ -155,7 +155,7 @@ int draw_select_file(int* selected, int* window, char* input_folder, char* folde
 	RETURNOPT();		
 }
 
-void draw_package_decrypt(char* package, uint64_t done, uint64_t total) {
+void draw_package_decrypt(const char* package, uint64_t done, uint64_t total) {
 	start_draw();
 	draw_background();
 	draw_title_format("Installing package %s ...", package);
