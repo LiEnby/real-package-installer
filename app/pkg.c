@@ -45,9 +45,10 @@ int pkg_read(pkg_state* state, void* buffer, size_t bufferSize) {
 int pkg_read_offset(pkg_state* state, uint32_t offset, void* buffer, size_t bufferSize) {
 	
 	CHECK_ERROR(pkg_seek(state, offset, SCE_SEEK_SET));
-	CHECK_ERROR(pkg_read(state, buffer, bufferSize));
+	int amtRead = pkg_read(state, buffer, bufferSize);
+	CHECK_ERROR(amtRead);
 	
-	return 0;
+	return amtRead;
 }
 
 int pkg_get_metadata(pkg_state *state) {	
@@ -120,6 +121,7 @@ int extract_file(pkg_state* state, char* outfile) {
 	do { 
 		// get amount of data to read
 		int readSize = (sizeof(buffer) < (state->pkgItem.data_size - totalRead)) ? sizeof(buffer) : (state->pkgItem.data_size - totalRead);
+		
 		// read the data
 		int amtRead = pkg_read(state, buffer, readSize);
 		CHECK_ERROR(amtRead);
