@@ -21,9 +21,9 @@ typedef struct PKG_FILE_HEADER {
     uint32_t magic;
     uint16_t revision;
     uint16_t type;
-    uint32_t info_offset;
-    uint32_t info_count;
-    uint32_t header_size;
+    uint32_t meta_offset;
+    uint32_t meta_count;
+    uint32_t meta_size;
     uint32_t item_count;
     uint64_t total_size;
     uint64_t data_offset;
@@ -52,15 +52,28 @@ typedef struct PKG_EXT_HEADER {
     uint64_t padding_04;
 } PACKED PKG_EXT_HEADER;
 
+typedef struct PKG_METADATA_ENTRY {
+	uint32_t type;
+	uint32_t size;
+} PKG_METADATA_ENTRY;
+
 typedef struct PKG_METADATA {
     uint32_t drm_type;           //Record type 0x1 (for trial-enabled packages, drm is either 0x3 or 0xD)
     uint32_t content_type;       //Record type 0x2
     uint32_t package_flags;      //Record type 0x3
-    uint32_t index_table_offset; //Record type 0xD, offset 0x0
-    uint32_t index_table_size;   //Record type 0xD, offset 0x4
+    uint32_t item_table_offset; //Record type 0xD, offset 0x0
+    uint32_t item_table_size;   //Record type 0xD, offset 0x4
     uint32_t sfo_offset;         //Plaintext SFO copy, record type 0xE, offset 0x0
     uint32_t sfo_size;           //Record type 0xE, offset 0x4
 } PKG_METADATA;
+
+typedef enum PKG_METADATA_TYPE {
+	PKG_META_DRM_TYPE = 0x1,
+	PKG_META_CONTENT_TYPE = 0x2,
+	PKG_META_PACKAGE_FLAGS = 0x3,
+	PKG_META_FILE_INDEX_INFO = 0xD,
+	PKG_META_SFO = 0xE
+} PKG_METADATA_TYPE;
 
 typedef enum PKG_FILE_TYPE {
 	PKG_TYPE_FILE = 0x3,
@@ -75,6 +88,16 @@ typedef enum PKG_FILE_TYPE {
 	PKG_TYPE_SCESYS_CERT_BIN = 0x17,
 	PKG_TYPE_SCESYS_DIGS_BIN = 0x18
 } PKG_FILE_TYPE;
+
+typedef struct pkg_state {
+	SceUID fd;
+	uint64_t offset;
+	PKG_FILE_HEADER pkgHeader;
+	PKG_EXT_HEADER pkgExtHeader;
+	PKG_METADATA pkgMetadata;
+	PKG_ITEM_RECORD pkgItem;
+} pkg_state;
+
 
 int expand_package(char* pkg_file, char* out_folder, void (*progress_callback)(char*, uint64_t, uint64_t));
 

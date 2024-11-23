@@ -21,8 +21,21 @@ void handle_install_package(char* package) {
 	
 	PRINT_STR("install package: %s\n", package);
 	EnableDevPackages();
-	do_package_decrypt(package);
+	disable_power_off();
+	lock_shell();
+	
+	int res = do_package_decrypt(package);
+
 	DisableDevPackages();
+	enable_power_off();
+	unlock_shell();
+	
+	if(res < 0) {
+		do_confirm_message_format("Install failed!", "The package failed to install, (error = 0x%X)\n", res);
+	}
+	else {
+		do_confirm_message("Install complete!", "The package was installed.");
+	}
 }
 
 void handle_select_npdrmfree_package() {
