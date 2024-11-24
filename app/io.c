@@ -1,13 +1,14 @@
 #include <stdint.h>
 #include <stdlib.h>
-#include <vitasdk.h>
 #include <string.h>
+#include <stdio.h>
+#include <vitasdk.h>
 
 #include "io.h"
 #include "log.h"
 #include "err.h"
 
-int file_exist(char* path) {
+int file_exist(const char* path) {
 	SceIoStat stat;
 	int res = sceIoGetstat(path, &stat);
 	if(res >= 0) return 1;
@@ -84,6 +85,53 @@ int get_files_in_folder(char* folder, char* out_filenames, int* total_folders, S
 	return ret;	
 }
 
+int delete_tree(const char* path) {
+	int ret = 0;
+	int dirReadRet = 0;
+	
+	if(!file_exist(path)) return 0;
+	
+	SceUID dfd = sceIoDopen(path);
+	if(dfd <= 0) ERROR(dfd);
+	
+	char* ent = malloc(MAX_PATH);
+	if(ent == NULL) ERROR(-1);
+	memset(ent, 0x00, MAX_PATH);
+	
+	SceIoDirent* dir = malloc(sizeof(SceIoDirent));
+	if(dir == NULL) ERROR(-1);
+	
+	do{
+		memset(dir, 0x00, sizeof(SceIoDirent));
+		dirReadRet = sceIoDread(dfd, dir);
+		
+		if(dirReadRet > 0) {
+			snprintf(ent, MAX_PATH, "%s/%s", path, dir->d_name);
+			
+			if(SCE_S_ISDIR(dir->d_stat.st_mode)) {
+				ret = delete_tree(ent);
+				PRINT_STR("delete_tree(%s) = 0x%X\n", ent, ret);
+				if(ret < 0) ERROR(ret);
+			}
+			else{
+				ret = sceIoRemove(ent);
+				PRINT_STR("sceIoRemove(%s) = 0x%X\n", ent, ret);
+				if(ret < 0) ERROR(ret);
+			}	
+		}
+	} while(dirReadRet > 0);
+	
+	
+error:
+	if(dfd > 0) sceIoDclose(dfd);
+	if(ent != NULL) free(ent);
+	if(dir != NULL) free(dir);
+	
+	CHECK_ERROR(sceIoRmdir(path));
+	
+	return ret;
+}
+
 int read_first_filename(char* path, char* output, size_t out_size) {
 	int ret = 0;
 	int dfd = sceIoDopen(path);
@@ -119,7 +167,31 @@ uint64_t get_free_space(const char* device) {
 	return free_space;
 }
 
-int write_file(const char* path, const char* data, size_t size) {
+uint64_t get_file_size(const char* filepath) {
+	SceIoStat stat;
+	int res = sceIoGetstat(filepath, &stat);
+	if(res >= 0)
+		return stat.st_size;
+	return 0;
+}
+
+int read_file(const char* path, void* data, size_t size) {
+	
+	int ret = 0;
+	SceUID fd = sceIoOpen(path, SCE_O_RDONLY, 0777);
+	if(fd > 0) {
+		ret = sceIoRead(fd, data, size);
+		if(ret < 0) goto error;
+		if(ret != size) ERROR(-1);
+	}
+	
+error:
+	sceIoClose(fd);
+	return ret;
+	
+}
+
+int write_file(const char* path, const void* data, size_t size) {
 	
 	int ret = 0;
 	SceUID wfd = sceIoOpen(path, SCE_O_WRONLY | SCE_O_CREAT, 0777);
@@ -133,4 +205,17 @@ error:
 	sceIoClose(wfd);
 	return ret;
 	
+}
+
+int copy_file(const char* path, const char* new_path) {
+	int ret = 0;
+	uint64_t fileSize = get_file_size(path);
+	char* data = malloc(fileSize);
+	if(data != NULL) {
+		if(read_file(path, data, fileSize) != fileSize) ERROR(fileSize);
+		if(write_file(new_path, data, fileSize) != fileSize) ERROR(fileSize);
+	}
+error:	
+	if(data != NULL) free(data);
+	return ret;
 }

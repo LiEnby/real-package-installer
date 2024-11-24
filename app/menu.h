@@ -3,7 +3,7 @@
 #define MENU_H 1
 
 #define txt_format(format, ...) \
-	char txt[256]; \
+	char txt[0x1028]; \
 	snprintf(txt, sizeof(txt), format, __VA_ARGS__)
 	
 	
@@ -13,16 +13,23 @@
 	do_confirm_message(title, txt); \
 };
 
+#define OP_CANCELED (-9530)
 
 int do_select_file(char* folder, char* output, char* extension, uint64_t max_size);
 void do_ime();
 void do_confirm_message(char* title, char* msg);
-int do_package_decrypt(char* package);
-int do_draw_main_menu();
+int do_package_install(char* package);
+int do_main_menu(char* packageDir);
+int do_run_fake_package_installer_method(char* packageDir);
+
+enum run_pkg_installer_options {
+	RUN_FAKE_PACKAGE_INSTALLER,
+	RUN_WITH_PACKAGE_SPECIFIED
+};
 
 enum main_menu_options {
-	INSTALL_NPDRM_BIND_PACKAGE,
-	INSTALL_NPDRM_FREE_PACKAGE,
+	INSTALL_NPDRM_PACKAGE,
+	CHANGE_PKG_DIRECTORY,
 	LAUNCH_FAKE_PKG_INSTALLER
 };
 

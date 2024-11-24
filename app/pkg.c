@@ -2,6 +2,7 @@
 #include "pkg.h"
 #include "io.h"
 #include "err.h"
+#include "rif.h"
 #include <vitasdk.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -240,6 +241,12 @@ int expand_package(const char* pkg_file, const char* out_folder, void (*progress
 	char outfile[MAX_PATH*2];
 	
 	pkg_state state;
+	
+	progress_callback(pkg_file, (uint64_t)0, (uint64_t)100);
+	
+	CHECK_ERROR(delete_tree(out_folder));
+	CHECK_ERROR(sceIoMkdir(out_folder, 0777));
+	
 	CHECK_ERROR(open_pkg(&state, pkg_file));
 	
 	for(int current_item = 0; current_item < state.pkgHeader.item_count; current_item++) 
@@ -274,32 +281,60 @@ int expand_package(const char* pkg_file, const char* out_folder, void (*progress
 			case PKG_TYPE_PFS_TEMP_BIN:
 			case PKG_TYPE_PFS_CLEARSIGN:
 			case PKG_TYPE_SCESYS_RIGHT_SUPRX:
-			case PKG_TYPE_SCESYS_CERT_BIN:
-			case PKG_TYPE_SCESYS_DIGS_BIN:
 			default:
 				CHECK_ERROR(extract_file(&state, outfile));
 				break;
 			case PKG_TYPE_DIR:
 			case PKG_TYPE_PFS_DIR:
-				sceIoMkdir(outfile, 0777);
-				
+				CHECK_ERROR(sceIoMkdir(outfile, 0777));
+				break;
+			case PKG_TYPE_SCESYS_CERT_BIN:
+			case PKG_TYPE_SCESYS_DIGS_BIN:
+				// ignore these ..
 				break;
 		}
 
 		PRINT_STR("flags 0x%08X (%02X) offset 0x%08llX length 0x%08llX %s\n", state.pkgItem.flags, (state.pkgItem.flags & 0x1F), state.pkgItem.data_offset, state.pkgItem.data_size, relFilename);
 	}
 	
+	// create sce_sys/package ...
+	snprintf(outfile, sizeof(outfile), "%s/%s", out_folder, "sce_sys");	
+	sceIoMkdir(outfile, 0777);
+	snprintf(outfile, sizeof(outfile), "%s/%s", out_folder, "sce_sys/package");	
+	sceIoMkdir(outfile, 0777);
+	
+	// create head.bin
 	snprintf(outfile, sizeof(outfile), "%s/%s", out_folder, "sce_sys/package/head.bin");
 	get_head_bin(&state, outfile);
 
+	// create tail.bin
 	snprintf(outfile, sizeof(outfile), "%s/%s", out_folder, "sce_sys/package/tail.bin");
 	get_tail_bin(&state, outfile);
 
+	// create work.bin (if appliciable)
+	snprintf(outfile, sizeof(outfile), "%s/%s", out_folder, "sce_sys/package/work.bin");	
+	get_work_bin(out_folder, outfile);
 	
 	close_pkg(&state);
 	return 0;
 }
 
+
+int get_work_bin(const char* pkg_folder, const char* outfile) {
+	char tempBinPath[MAX_PATH];
+	snprintf(tempBinPath, sizeof(tempBinPath), "%s/%s", pkg_folder, "sce_sys/package/temp.bin");
+
+	if(file_exist(tempBinPath)) {
+		uint64_t rifSize = get_file_size(tempBinPath);
+		PRINT_STR("workBinPath = %s, tempBinPath = %s, rifSize = %llx\n", outfile, tempBinPath, rifSize);
+		
+		if(rifSize == sizeof(SceNpDrmLicense) || rifSize == sizeof(ScePsmDrmLicense) || rifSize == offsetof(SceNpDrmLicense, flags)) {
+			if(is_debug_license(tempBinPath)) return 1;
+			if(is_npdrm_free_license(tempBinPath)) return (copy_file(tempBinPath, outfile) >= 0);
+		}
+	}
+	return 0;
+}
 
 int get_head_bin(pkg_state* state, const char* outfile) {
 	

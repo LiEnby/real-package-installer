@@ -4,6 +4,8 @@
 #include "log.h"
 #include "io.h"
 #include "pkg.h"
+#include "promote.h"
+#include "err.h"
 
 #include <string.h>
 #include <stdio.h>
@@ -63,6 +65,8 @@ static uint8_t options[0x1000];
 								selected++; \
 							 } while(selected < sizeof(options) && options[selected] == 0); \
 							 break; \
+						 case SCE_CTRL_CIRCLE: \
+							 return OP_CANCELED; \
 						 case SCE_CTRL_CROSS: \
 							 break; \
 					  } \
@@ -99,17 +103,55 @@ do{ \
 	draw_title(txt); \
 }while(0);
 
-int draw_main_menu(int* selected, int* window, ...) {
+void draw_ime() {
+	start_draw();
+	draw_background();
+	
+	draw_title("Starting IME Dialog ...");
+
+	draw_text_center(200, "IME Dialog is opening...");
+	
+	end_draw();
+}
+
+int draw_run_fake_package_installer_method(int* selected, int* window, char* packageDir) {
 	start_draw();
 	draw_background();
 
-	draw_title("Real Package Installer");
+	draw_title("★Package Installer options...");
 	
-	DEFOPT(200);
+	draw_text_center(110, "This will run the offical \"fake_package_installer\" (NPXS10031) application.");
+	draw_text_center(130, "it's an application built into every PlayStation Vita, but the icon is hidden.");
+	draw_text_center(150, "it can ONLY install NpDrm Free and Dev Packages, from CMA or host0.");
+	draw_text_center(170, "if your packages require a license this will not work to install them.");
 
-	ADDOPT(1, "Install NpDrm-Bind Package");
-	ADDOPT(1, "Install NpDrm-Free Package");
-	ADDOPT(1, "Launch Sony ★Package Installer (NPXS10031)");
+	draw_text_center_format(210, "NOTE: host0:/package has been redirected to %s", packageDir);
+	
+	
+	DEFOPT(250);
+
+	ADDOPT(1, "★Run directly");
+	ADDOPT(1, "★Run specifying a package.");
+	
+	end_draw();
+	
+	RETURNOPT();
+}
+
+int draw_main_menu(int* selected, int* window, char* packageDir) {
+	start_draw();
+	draw_background();
+
+	draw_title("★RealPackage Installer");
+
+	draw_text_center_format(170, "Package directory is: %s", packageDir);
+
+	
+	DEFOPT(250);
+
+	ADDOPT(1, "★Install Package Files");
+	ADDOPT(1, "★Change package directory");
+	ADDOPT(1, "★Run Sony Package Installer");
 	
 	end_draw();
 	
@@ -146,7 +188,7 @@ int draw_select_file(int* selected, int* window, char* input_folder, char* folde
 		if(i >= total_files) break;
 		
 		char file[MAX_PATH];
-		snprintf(file, sizeof(file), "%.50s", folders + (i * MAX_PATH));
+		snprintf(file, sizeof(file), "%.65s", folders + (i * MAX_PATH));
 		ADDOPT(1, file);
 	}
 	
@@ -155,12 +197,23 @@ int draw_select_file(int* selected, int* window, char* input_folder, char* folde
 	RETURNOPT();		
 }
 
-void draw_package_decrypt(const char* package, uint64_t done, uint64_t total) {
+void draw_package_expand(const char* package, uint64_t done, uint64_t total) {
 	start_draw();
 	draw_background();
-	draw_title_format("Installing package %s ...", package);
+	draw_title_format("Installing package %.50s ...", package);
 	
-	draw_text_center_format(200, "Expand package %s", package);
+	draw_text_center_format(200, "Expand package %.50s", package);
+	draw_progress_bar(230, done, total);
+
+	end_draw();
+}
+
+void draw_package_promote(const char* package, uint64_t done, uint64_t total) {
+	start_draw();
+	draw_background();
+	draw_title_format("Running ScePromote ... %s", package);
+	
+	draw_text_center(200, "Promoting Package (creating a bubble) ...");
 	draw_progress_bar(230, done, total);
 
 	end_draw();
@@ -189,21 +242,51 @@ int do_select_file(char* folder, char* output, char* extension, uint64_t max_siz
 	return selected;	
 }
 
-int do_package_decrypt(char* package) {
+int do_package_install(char* package) {
 	PRINT_STR("do_package_decrypt\n");
 	sceIoMkdir("ux0:/temp", 0777);
-	sceIoMkdir("ux0:/temp/game", 0777);
+	sceIoMkdir("ux0:/temp/fakepkg", 0777);
+	sceIoMkdir("ux0:/temp/fakepkg/expand", 0777);
+	
+	const char* expand_location = "ux0:/temp/fakepkg/expand";
+	const char* promote_location = "ux0:/temp/game";
 
-	int res = expand_package(package, "ux0:/temp/game", draw_package_decrypt);
+	int res = expand_package(package, expand_location, draw_package_expand);
+	if(res >= 0) {
+		res = delete_tree(promote_location);
+		if(res >= 0) {
+			res = sceIoRename(expand_location, promote_location);
+			if(res >= 0) {
+				res = promote(promote_location, draw_package_promote);
+			}			
+		}
+	}
+	
+	delete_tree(promote_location);
+	delete_tree("ux0:/temp/fakepkg");
+	
+	PRINT_STR("result = 0x%X\n", res);
+	
 	return res;
 }
+
 
 void do_confirm_message(char* title, char* msg) {
 	draw_confirmation_message(title, msg);
 	get_key();
 }
 
-int do_draw_main_menu(char* output) {
-	PROCESS_MENU(draw_main_menu, 0);
+int do_run_fake_package_installer_method(char* packageDir) {
+	PROCESS_MENU(draw_run_fake_package_installer_method, packageDir);
 	return selected;
+}
+
+int do_main_menu(char* packageDir) {
+	PROCESS_MENU(draw_main_menu, packageDir);
+	return selected;
+}
+
+void do_ime() {
+	for(int i = 0; i < 0x5; i++)
+		draw_ime();
 }
