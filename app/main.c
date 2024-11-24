@@ -100,37 +100,33 @@ void handle_run_pkg_installer() {
 				break;
 		};
 
-		break;
 	};
 }
 
 void handle_main_menu_option() {
 	
 	int selected = -1;
-	while(1) {
-		selected = do_main_menu(PKG_INSTALL_LOCATION);
-		switch(selected) {
-			case INSTALL_NPDRM_PACKAGE:
-				handle_select_npdrm_package(handle_install_package);
-				break;
-			case CHANGE_PKG_DIRECTORY:
-				open_ime("Set package install location", PKG_INSTALL_LOCATION, sizeof(PKG_INSTALL_LOCATION)-1);
-				
-				if(!file_exist(PKG_INSTALL_LOCATION)) {
-					do_confirm_message_format("Directory not found!", "No folder exists at %s", PKG_INSTALL_LOCATION);
-					strncpy(PKG_INSTALL_LOCATION, "ux0:/package", sizeof(PKG_INSTALL_LOCATION)-1);
-				}
-				
-				break;
-			case LAUNCH_FAKE_PKG_INSTALLER:
-				handle_run_pkg_installer();
-				break;
-			default:
-				break;
-		};
-
-		break;
+	selected = do_main_menu(PKG_INSTALL_LOCATION);
+	switch(selected) {
+		case INSTALL_NPDRM_PACKAGE:
+			handle_select_npdrm_package(handle_install_package);
+			break;
+		case CHANGE_PKG_DIRECTORY:
+			open_ime("Set package install location", PKG_INSTALL_LOCATION, sizeof(PKG_INSTALL_LOCATION)-1);
+			
+			if(!file_exist(PKG_INSTALL_LOCATION)) {
+				do_confirm_message_format("Directory not found!", "No folder exists at %s", PKG_INSTALL_LOCATION);
+				strncpy(PKG_INSTALL_LOCATION, "ux0:/package", sizeof(PKG_INSTALL_LOCATION)-1);
+			}
+			
+			break;
+		case LAUNCH_FAKE_PKG_INSTALLER:
+			handle_run_pkg_installer();
+			break;
+		default:
+			break;
 	};
+
 }
 
 
