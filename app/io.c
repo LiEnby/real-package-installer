@@ -15,7 +15,7 @@ int file_exist(const char* path) {
 	else return 0;
 }
 
-int get_files_in_folder(char* folder, char* out_filenames, int* total_folders, SearchFilter* filter, size_t max_files) {
+int get_files_in_folder(const char* folder, char* out_filenames, int* total_folders, SearchFilter* filter, size_t max_files) {
 	int ret = 0;
 	
 	// get total folder count
@@ -132,7 +132,7 @@ error:
 	return ret;
 }
 
-int read_first_filename(char* path, char* output, size_t out_size) {
+int read_first_filename(const char* path, char* output, size_t out_size) {
 	int ret = 0;
 	int dfd = sceIoDopen(path);
 	if(dfd < 0) ERROR(dfd);
@@ -192,8 +192,13 @@ error:
 }
 
 int write_file(const char* path, const void* data, size_t size) {
-	
+	char outdir[MAX_PATH];
 	int ret = 0;
+
+	// create directory for file if it doesnt exist already.
+	extract_dirname(path, outdir, sizeof(outdir));
+	make_directories(outdir);
+	
 	SceUID wfd = sceIoOpen(path, SCE_O_WRONLY | SCE_O_CREAT, 0777);
 	if(wfd > 0) {
 		ret = sceIoWrite(wfd, data, size);
@@ -211,6 +216,7 @@ int copy_file(const char* path, const char* new_path) {
 	int ret = 0;
 	uint64_t fileSize = get_file_size(path);
 	char* data = malloc(fileSize);
+	
 	if(data != NULL) {
 		if(read_file(path, data, fileSize) != fileSize) ERROR(fileSize);
 		if(write_file(new_path, data, fileSize) != fileSize) ERROR(fileSize);
@@ -218,4 +224,40 @@ int copy_file(const char* path, const char* new_path) {
 error:	
 	if(data != NULL) free(data);
 	return ret;
+}
+
+int extract_dirname(const char* path, char* dirname, int dirname_length) {
+	strncpy(dirname, path, dirname_length);
+	
+	
+	int lastSlash = 0;
+	for(int i = 0; i < strlen(path); i++) {
+		if(path[i] == '/' || path[i] == '\\') lastSlash = i;
+	}
+	
+	dirname[lastSlash] = 0;
+	return lastSlash;
+}
+
+void make_directories(const char* path) {
+	if(file_exist(path)) return;
+	
+	char dirname[MAX_PATH];
+	memset(dirname, 0x00, sizeof(dirname));
+	
+
+	for(int i = 0; i < strlen(path); i++) {
+		if(path[i] == '/' || path[i] == '\\') {
+			memset(dirname, 0, sizeof(dirname));
+			strncpy(dirname, path, i);
+
+			if(!file_exist(dirname)){
+				PRINT_STR("Creating Directory directory: %s\n", dirname);
+				sceIoMkdir(dirname, 0777);
+			}	
+		}
+	}
+	
+	sceIoMkdir(path, 0777);
+	
 }

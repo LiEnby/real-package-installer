@@ -9,26 +9,21 @@
 
 static uint8_t disable_power = 0;
 
-int kernel_started() {
+int module_is_running(char* module_name) {
 	char buffer[0x8];
 	memset(buffer, 0x00, sizeof(buffer));
 	
-	SceUID uid = _vshKernelSearchModuleByName("real_pkg_installer_helper", buffer);
+	SceUID uid = _vshKernelSearchModuleByName(module_name, buffer);
 	PRINT_STR("_vshKernelSearchModuleByName = %x\n", uid);
 	
-	
-	if(uid >= 0) // started already
-		return 1;
-	else
-		return 0; // module not yet running
-		
+	return (uid >= 0);
 }
 
 void load_kernel_modules() {
 	char kplugin_path[0x200];
 	memset(kplugin_path,0x00,0x200);
 	
-	if(kernel_started() == 0) {
+	if(module_is_running("real_pkg_installer_helper") == 0) {
 		// get current title id
 		char titleid[12];
 		sceAppMgrAppParamGetString(0, 12, titleid , 256);

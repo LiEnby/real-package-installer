@@ -9,52 +9,52 @@
 #include <string.h>
 
 
-int pkg_decrypt(int offset, void* buffer, size_t bufferSize) {
+int decrypt_pkg(int offset, void* buffer, size_t bufferSize) {
 	_sceNpDrmPackageDecrypt_opt decryptOption;
 	decryptOption.offset = offset; 
-	decryptOption.identifier = 0x100;
+	decryptOption.identifier = 0x8001;
 	
 	CHECK_ERROR(_sceNpDrmPackageDecrypt(buffer, bufferSize, &decryptOption));
 	return 0;
 }
 
 
-uint64_t pkg_seek(pkg_state* state, uint64_t whence, int mode) {
+uint64_t seek_pkg(PKG_STATE* state, uint64_t whence, int mode) {
 	uint64_t newLocation = sceIoLseek(state->fd, whence, mode);
 	CHECK_ERROR(newLocation);
 	state->offset = newLocation;
 	return newLocation;
 }
 
-int pkg_read(pkg_state* state, void* buffer, size_t bufferSize) {
+int read_pkg(PKG_STATE* state, void* buffer, size_t bufferSize) {
 	int amtRead = sceIoRead(state->fd, buffer, bufferSize);
 	CHECK_ERROR(amtRead);
 	
 	if(state->offset >= state->pkgHeader.data_offset) {
 		uint32_t relOffset = (state->offset - state->pkgHeader.data_offset);
-		CHECK_ERROR(pkg_decrypt(relOffset, buffer, bufferSize));
+		CHECK_ERROR(decrypt_pkg(relOffset, buffer, bufferSize));
 	}
 	
 	state->offset += amtRead;
 	return amtRead;
 }
 
-int pkg_read_offset(pkg_state* state, uint32_t offset, void* buffer, size_t bufferSize) {
+int read_pkg_offset(PKG_STATE* state, uint32_t offset, void* buffer, size_t bufferSize) {
 	
-	CHECK_ERROR(pkg_seek(state, offset, SCE_SEEK_SET));
-	int amtRead = pkg_read(state, buffer, bufferSize);
+	CHECK_ERROR(seek_pkg(state, offset, SCE_SEEK_SET));
+	int amtRead = read_pkg(state, buffer, bufferSize);
 	CHECK_ERROR(amtRead);
 	
 	return amtRead;
 }
 
-int pkg_get_metadata(pkg_state *state) {	
-	CHECK_ERROR(pkg_seek(state, state->pkgHeader.meta_offset, SCE_SEEK_SET));
+int pkg_get_metadata(PKG_STATE *state) {	
+	CHECK_ERROR(seek_pkg(state, state->pkgHeader.meta_offset, SCE_SEEK_SET));
 	
 	
 	for(int i = 0;  i < state->pkgHeader.meta_count; i++) {
 		PKG_METADATA_ENTRY metaEntry;
-		CHECK_ERROR(pkg_read(state, &metaEntry, sizeof(PKG_METADATA_ENTRY)));
+		CHECK_ERROR(read_pkg(state, &metaEntry, sizeof(PKG_METADATA_ENTRY)));
 		
 		metaEntry.type = __builtin_bswap32(metaEntry.type);
 		metaEntry.size = __builtin_bswap32(metaEntry.size);
@@ -65,25 +65,25 @@ int pkg_get_metadata(pkg_state *state) {
 		switch(metaEntry.type) {
 			case PKG_META_DRM_TYPE:
 				PRINT_STR("PKG_META_DRM_TYPE\n");
-				rd += pkg_read(state, &state->pkgMetadata.drm_type, sizeof(uint32_t));
+				rd += read_pkg(state, &state->pkgMetadata.drm_type, sizeof(uint32_t));
 				break;
 			case PKG_META_CONTENT_TYPE:
 				PRINT_STR("PKG_META_CONTENT_TYPE\n");
-				rd += pkg_read(state, &state->pkgMetadata.content_type, sizeof(uint32_t));
+				rd += read_pkg(state, &state->pkgMetadata.content_type, sizeof(uint32_t));
 				break;
 			case PKG_META_PACKAGE_FLAGS:
 				PRINT_STR("PKG_META_PACKAGE_FLAGS\n");
-				rd += pkg_read(state, &state->pkgMetadata.package_flags, sizeof(uint32_t));
+				rd += read_pkg(state, &state->pkgMetadata.package_flags, sizeof(uint32_t));
 				break;
 			case PKG_META_FILE_ITEM_INFO:
 				PRINT_STR("PKG_META_FILE_ITEM_INFO\n");
-				rd += pkg_read(state, &state->pkgMetadata.item_table_offset, sizeof(uint32_t));
-				rd += pkg_read(state, &state->pkgMetadata.item_table_size, sizeof(uint32_t));
+				rd += read_pkg(state, &state->pkgMetadata.item_table_offset, sizeof(uint32_t));
+				rd += read_pkg(state, &state->pkgMetadata.item_table_size, sizeof(uint32_t));
 				break;
 			case PKG_META_SFO:
 				PRINT_STR("PKG_META_SFO\n");
-				rd += pkg_read(state, &state->pkgMetadata.sfo_offset, sizeof(uint32_t));
-				rd += pkg_read(state, &state->pkgMetadata.sfo_size, sizeof(uint32_t));
+				rd += read_pkg(state, &state->pkgMetadata.sfo_offset, sizeof(uint32_t));
+				rd += read_pkg(state, &state->pkgMetadata.sfo_size, sizeof(uint32_t));
 				break;
 			default:
 				PRINT_STR("Unknown meta entry type! (%x)\n", metaEntry.type);
@@ -91,7 +91,7 @@ int pkg_get_metadata(pkg_state *state) {
 		}
 		PRINT_STR("rd = %x, (metaEntry.size-rd) = %x\n", rd, metaEntry.size - rd);
 		CHECK_ERROR(rd);
-		CHECK_ERROR(pkg_seek(state, metaEntry.size - rd, SCE_SEEK_CUR));
+		CHECK_ERROR(seek_pkg(state, metaEntry.size - rd, SCE_SEEK_CUR));
 	}
 	state->pkgMetadata.drm_type           = __builtin_bswap32( state->pkgMetadata.drm_type );
 	state->pkgMetadata.content_type       = __builtin_bswap32( state->pkgMetadata.content_type );
@@ -112,24 +112,29 @@ int pkg_get_metadata(pkg_state *state) {
 	return 0;
 }
 
-int close_pkg(pkg_state* state) {
+int close_pkg(PKG_STATE* state) {
 	CHECK_ERROR(sceIoClose(state->fd));
-	memset(state, 0, sizeof(pkg_state));
+	
+	// clear state variables
+	state->fd = 0;
+	state->offset = 0;
+	memset(&state->pkgItem, 0, sizeof(PKG_ITEM_RECORD));
+	
 	return 0;
 }
 
 
-int open_pkg(pkg_state* state, const char* pkg_file) {
+int open_pkg(PKG_STATE* state, const char* pkg_file) {
 	static char checkPkg[0x8000];
 	memset(checkPkg, 0, sizeof(checkPkg));
-	memset(state, 0, sizeof(pkg_state));
+	memset(state, 0, sizeof(PKG_STATE));
 	
 	state->fd = sceIoOpen(pkg_file, SCE_O_RDONLY, 0);
 	CHECK_ERROR(state->fd);	
 	
 	// check pkg with npdrm ...
 	CHECK_ERROR(sceIoRead(state->fd, checkPkg, sizeof(checkPkg)));
-	CHECK_ERROR(_sceNpDrmPackageCheck(checkPkg, sizeof(checkPkg), 0, 0x100));
+	CHECK_ERROR(_sceNpDrmPackageCheck(checkPkg, sizeof(checkPkg), 0, 0x101));
 	CHECK_ERROR(sceIoLseek(state->fd, 0, SCE_SEEK_SET));
 	
 	
@@ -164,7 +169,7 @@ int open_pkg(pkg_state* state, const char* pkg_file) {
 	
 	
 	
-	if (state->pkgHeader.meta_size > sizeof(PKG_FILE_HEADER)) {
+	if (state->pkgHeader.type >= 2) {
 		CHECK_ERROR(sceIoRead(state->fd, &state->pkgExtHeader, sizeof(PKG_EXT_HEADER)));
 		
 		state->pkgExtHeader.magic         =    __builtin_bswap32( state->pkgExtHeader.magic );
@@ -202,9 +207,8 @@ int open_pkg(pkg_state* state, const char* pkg_file) {
 	return 0;
 }
 
-int extract_file(pkg_state* state, const char* outfile) {
-	
-	CHECK_ERROR(pkg_seek(state, state->pkgHeader.data_offset + state->pkgItem.data_offset, SCE_SEEK_SET));	
+int extract_file(PKG_STATE* state, const char* outfile) {
+	CHECK_ERROR(seek_pkg(state, state->pkgHeader.data_offset + state->pkgItem.data_offset, SCE_SEEK_SET));	
 	SceUID wfd = sceIoOpen(outfile, SCE_O_WRONLY | SCE_O_CREAT, 0777);
 	CHECK_ERROR(wfd);
 	
@@ -217,7 +221,7 @@ int extract_file(pkg_state* state, const char* outfile) {
 		int readSize = (sizeof(buffer) < (state->pkgItem.data_size - totalRead)) ? sizeof(buffer) : (state->pkgItem.data_size - totalRead);
 		
 		// read the data
-		int amtRead = pkg_read(state, buffer, readSize);
+		int amtRead = read_pkg(state, buffer, readSize);
 		if(amtRead < 0) ERROR(amtRead);
 		if(amtRead != readSize) ERROR(-1);
 
@@ -239,15 +243,19 @@ int expand_package(const char* pkg_file, const char* out_folder, void (*progress
 	
 	char relFilename[MAX_PATH];
 	char outfile[MAX_PATH*2];
+	char dirname[MAX_PATH*2];
 	
-	pkg_state state;
+	PKG_STATE state;
 	
 	progress_callback(pkg_file, (uint64_t)0, (uint64_t)100);
 	
 	CHECK_ERROR(delete_tree(out_folder));
 	CHECK_ERROR(sceIoMkdir(out_folder, 0777));
-	
 	CHECK_ERROR(open_pkg(&state, pkg_file));
+	
+	extract_dirname(out_folder, dirname, sizeof(dirname));
+	make_directories(dirname);
+
 	
 	for(int current_item = 0; current_item < state.pkgHeader.item_count; current_item++) 
 	{
@@ -258,7 +266,7 @@ int expand_package(const char* pkg_file, const char* out_folder, void (*progress
 		if(progress_callback != NULL) progress_callback(pkg_file, (uint64_t)current_item, (uint64_t)state.pkgHeader.item_count);
 
 		// read item record entry
-		CHECK_ERROR(pkg_read_offset(&state, ((state.pkgHeader.data_offset + state.pkgMetadata.item_table_offset) + (current_item * sizeof(PKG_ITEM_RECORD))), &state.pkgItem, sizeof(PKG_ITEM_RECORD)));
+		CHECK_ERROR(read_pkg_offset(&state, ((state.pkgHeader.data_offset + state.pkgMetadata.item_table_offset) + (current_item * sizeof(PKG_ITEM_RECORD))), &state.pkgItem, sizeof(PKG_ITEM_RECORD)));
 		
 		state.pkgItem.flags            = __builtin_bswap32(state.pkgItem.flags);
 		state.pkgItem.filename_offset  = __builtin_bswap32(state.pkgItem.filename_offset);
@@ -268,10 +276,17 @@ int expand_package(const char* pkg_file, const char* out_folder, void (*progress
 
 
 		// read and item filename
+		if(IS_PSP_CONTENT_TYPE(state.pkgMetadata.content_type) && !IS_PSP_OR_VITA_KEY(state.pkgItem.flags)) continue; // vita cant decrypt ps3 encrypted items.
 		if(state.pkgItem.filename_size > sizeof(relFilename)) CHECK_ERROR(-3);
-		CHECK_ERROR(pkg_read_offset(&state, (state.pkgHeader.data_offset + state.pkgItem.filename_offset), relFilename, state.pkgItem.filename_size));	
+		CHECK_ERROR(read_pkg_offset(&state, (state.pkgHeader.data_offset + state.pkgItem.filename_offset), relFilename, state.pkgItem.filename_size));	
 		snprintf(outfile, sizeof(outfile), "%s/%s", out_folder, relFilename);
-
+		
+		// create directories for it.
+		extract_dirname(outfile, dirname, sizeof(dirname));
+		make_directories(dirname);
+		
+		
+		PRINT_STR("flags 0x%08X (%02X) offset 0x%08llX length 0x%08llX %s\n", state.pkgItem.flags, (state.pkgItem.flags & 0x1F), state.pkgItem.data_offset, state.pkgItem.data_size, relFilename);
 
 		switch(state.pkgItem.flags & 0x1F){
 			case PKG_TYPE_FILE:
@@ -294,14 +309,7 @@ int expand_package(const char* pkg_file, const char* out_folder, void (*progress
 				break;
 		}
 
-		PRINT_STR("flags 0x%08X (%02X) offset 0x%08llX length 0x%08llX %s\n", state.pkgItem.flags, (state.pkgItem.flags & 0x1F), state.pkgItem.data_offset, state.pkgItem.data_size, relFilename);
 	}
-	
-	// create sce_sys/package ...
-	snprintf(outfile, sizeof(outfile), "%s/%s", out_folder, "sce_sys");	
-	sceIoMkdir(outfile, 0777);
-	snprintf(outfile, sizeof(outfile), "%s/%s", out_folder, "sce_sys/package");	
-	sceIoMkdir(outfile, 0777);
 	
 	// create head.bin
 	snprintf(outfile, sizeof(outfile), "%s/%s", out_folder, "sce_sys/package/head.bin");
@@ -313,14 +321,42 @@ int expand_package(const char* pkg_file, const char* out_folder, void (*progress
 
 	// create work.bin (if appliciable)
 	snprintf(outfile, sizeof(outfile), "%s/%s", out_folder, "sce_sys/package/work.bin");	
-	get_work_bin(out_folder, outfile);
+	get_work_bin(&state, out_folder, outfile);
 	
 	close_pkg(&state);
 	return 0;
 }
 
 
-int get_work_bin(const char* pkg_folder, const char* outfile) {
+
+PKG_STATE package_state(const char* pkg_file) {
+	PKG_STATE state;
+	
+	int res = open_pkg(&state, pkg_file);
+	if(res > 0) close_pkg(&state);
+	
+	return state;
+}
+
+void package_content_id(const char* pkg_file, char* content_id, size_t len) {
+	PKG_STATE state = package_state(pkg_file);
+	if(len > sizeof(state.pkgHeader.content_id)) len = sizeof(state.pkgHeader.content_id);
+	strncpy(content_id, state.pkgHeader.content_id, len);
+}
+
+int package_meta_flags(const char* pkg_file) {	
+	return package_state(pkg_file).pkgMetadata.package_flags;
+}
+
+int package_content_type(const char* pkg_file) {	
+	return package_state(pkg_file).pkgMetadata.content_type;
+}
+
+int package_revision(const char* pkg_file) {
+	return package_state(pkg_file).pkgHeader.revision;
+}
+
+int get_work_bin(PKG_STATE* state, const char* pkg_folder, const char* outfile) {
 	char tempBinPath[MAX_PATH];
 	snprintf(tempBinPath, sizeof(tempBinPath), "%s/%s", pkg_folder, "sce_sys/package/temp.bin");
 
@@ -329,15 +365,17 @@ int get_work_bin(const char* pkg_folder, const char* outfile) {
 		PRINT_STR("workBinPath = %s, tempBinPath = %s, rifSize = %llx\n", outfile, tempBinPath, rifSize);
 		
 		if(rifSize == sizeof(SceNpDrmLicense) || rifSize == sizeof(ScePsmDrmLicense) || rifSize == offsetof(SceNpDrmLicense, flags)) {
-			if(is_debug_license(tempBinPath)) return 1;
-			if(is_npdrm_free_license(tempBinPath)) return (copy_file(tempBinPath, outfile) >= 0);
+			PRINT_STR("rifSize matches known size\n");
+			if(state->pkgHeader.revision == PKG_REVISION_DEBUG && is_zeroed_license(tempBinPath)) { PRINT_STR("is_debug_license reached\n"); return 1; };
+			if(is_npdrm_free_license(tempBinPath)) { PRINT_STR("is_npdrm_free_license reached\n"); return (copy_file(tempBinPath, outfile) >= 0); };
 		}
 	}
+	
+	PRINT_STR("license not found\n");
 	return 0;
 }
 
-int get_head_bin(pkg_state* state, const char* outfile) {
-	
+int get_head_bin(PKG_STATE* state, const char* outfile) {
 	int ret = 0;
 	int headSize = (state->pkgHeader.data_offset + state->pkgMetadata.item_table_size);
 	char* head = malloc(headSize);
@@ -352,14 +390,15 @@ int get_head_bin(pkg_state* state, const char* outfile) {
 	else {
 		ERROR(0);
 	}
-		
+	
+
 error:
-	pkg_seek(state, 0, SCE_SEEK_SET);
+	seek_pkg(state, 0, SCE_SEEK_SET);
 	free(head);
 	return ret;
 }
 
-int get_tail_bin(pkg_state* state, const char* outfile) {
+int get_tail_bin(PKG_STATE* state, const char* outfile) {
 	
 	int ret = 0;
 	uint64_t tailOffset = state->pkgHeader.data_offset + state->pkgHeader.data_size;
@@ -378,7 +417,7 @@ int get_tail_bin(pkg_state* state, const char* outfile) {
 	}
 	
 error:
-	pkg_seek(state, 0, SCE_SEEK_SET);
+	seek_pkg(state, 0, SCE_SEEK_SET);
 	free(tail);
 	return ret;
 }

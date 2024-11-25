@@ -15,12 +15,21 @@
 
 #define OP_CANCELED (-9530)
 
-int do_select_file(char* folder, char* output, char* extension, uint64_t max_size);
+int do_select_file(const char* folder, char* output, const char* extension, uint64_t max_size);
 void do_ime();
 void do_confirm_message(char* title, char* msg);
-int do_package_install(char* package);
 int do_main_menu(char* packageDir);
 int do_run_fake_package_installer_method(char* packageDir);
+
+int do_package_extract(const char* package, const char* expand_location);
+int do_package_install(const char* expand_location, const char* package);
+int do_package_rif(const char* package, char* rif_folder);
+
+enum select_rif_options {
+	SELECT_RIF_FILE,
+	SELECT_RIF_DIRECTORY,
+	GENERATE_NOPSPEMU_RIF
+};
 
 enum run_pkg_installer_options {
 	RUN_FAKE_PACKAGE_INSTALLER,

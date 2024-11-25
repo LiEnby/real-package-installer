@@ -6,6 +6,7 @@
 #include "pkg.h"
 #include "promote.h"
 #include "err.h"
+#include "kernel.h"
 
 #include <string.h>
 #include <stdio.h>
@@ -125,7 +126,7 @@ int draw_run_fake_package_installer_method(int* selected, int* window, char* pac
 	draw_text_center(150, "it can ONLY install NpDrm Free and Dev Packages, from CMA or host0.");
 	draw_text_center(170, "if your packages require a license this will not work to install them.");
 
-	draw_text_center_format(210, "NOTE: host0:/package has been redirected to %s", packageDir);
+	draw_text_center_format(210, "NOTE: host0:/package has been redirected to %.60s", packageDir);
 	
 	
 	DEFOPT(250);
@@ -138,13 +139,39 @@ int draw_run_fake_package_installer_method(int* selected, int* window, char* pac
 	RETURNOPT();
 }
 
+
+
+int draw_package_rif(int* selected, int* window, int content_type, char* rif_folder) {
+	start_draw();
+	draw_background();
+	
+	draw_title("Rights information file Required!");
+	
+
+	draw_text_center(110, "The package file selected, requires a License aka \"Rights information file\" (RIF).");
+	draw_text_center(130, "you can manually select one to use, but if it is incorrect, the package will fail to install.");
+	draw_text_center(150, "if using a NoNpDrm or NoPsmDrm, please ensure the respective plugin(s) are installed.");
+
+	draw_text_center_format(220, "Current directory for licenses %.60s", rif_folder);
+		
+	DEFOPT(270);
+	
+	ADDOPT(1, "★Select a Rights information file");
+	ADDOPT(1, "★Change RIF directory");
+	ADDOPT( (IS_PSP_CONTENT_TYPE(content_type) && (module_is_running("NoPspEmuDrm_kern")) ), "★Generate NoPspEmuDrm License");
+	
+	
+	end_draw();
+	RETURNOPT();
+}
+
 int draw_main_menu(int* selected, int* window, char* packageDir) {
 	start_draw();
 	draw_background();
 
 	draw_title("★RealPackage Installer");
 
-	draw_text_center_format(170, "Package directory is: %s", packageDir);
+	draw_text_center_format(170, "Package directory is: %.60s", packageDir);
 
 	
 	DEFOPT(250);
@@ -170,7 +197,7 @@ void draw_confirmation_message(char* title, char* msg) {
 	end_draw();
 }
 
-int draw_select_file(int* selected, int* window, char* input_folder, char* folders, int total_files) {
+int draw_select_file(int* selected, int* window, const char* input_folder, char* folders, int total_files) {
 	start_draw();
 	draw_background();
 	
@@ -219,7 +246,7 @@ void draw_package_promote(const char* package, uint64_t done, uint64_t total) {
 	end_draw();
 }
 
-int do_select_file(char* folder, char* output, char* extension, uint64_t max_size) {
+int do_select_file(const char* folder, char* output, const char* extension, uint64_t max_size) {
 	int total_files = 0;	
 	static char files[MAX_PATH * sizeof(options)];
 	
@@ -242,32 +269,41 @@ int do_select_file(char* folder, char* output, char* extension, uint64_t max_siz
 	return selected;	
 }
 
-int do_package_install(char* package) {
-	PRINT_STR("do_package_decrypt\n");
-	sceIoMkdir("ux0:/temp", 0777);
-	sceIoMkdir("ux0:/temp/fakepkg", 0777);
-	sceIoMkdir("ux0:/temp/fakepkg/expand", 0777);
+int do_package_install(const char* expand_location, const char* package) {
+	PRINT_STR("%s\n", __FUNCTION__);
+	char dirname[MAX_PATH];
 	
-	const char* expand_location = "ux0:/temp/fakepkg/expand";
-	const char* promote_location = "ux0:/temp/game";
-
-	int res = expand_package(package, expand_location, draw_package_expand);
+	int contentType = package_content_type(package);
+	const char* promote_location = find_promote_location(contentType);
+	PRINT_STR("package_content_type = %x!\npromote_location = %s\n", contentType, promote_location);	
+	
+	// ensure directories exist.
+	extract_dirname(promote_location, dirname, sizeof(dirname));
+	make_directories(dirname);
+	
+	int res = delete_tree(promote_location);
 	if(res >= 0) {
-		res = delete_tree(promote_location);
-		if(res >= 0) {
-			res = sceIoRename(expand_location, promote_location);
-			if(res >= 0) {
-				res = promote(promote_location, draw_package_promote);
-			}			
+		res = sceIoRename(expand_location, promote_location);
+		if(need_promote(contentType) && res >= 0) {
+			res = promote(promote_location, draw_package_promote);
+		}
+		else {
+			delete_tree(promote_location);
 		}
 	}
-	
-	delete_tree(promote_location);
-	delete_tree("ux0:/temp/fakepkg");
-	
-	PRINT_STR("result = 0x%X\n", res);
-	
 	return res;
+}
+
+int do_package_extract(const char* package, const char* expand_location) {
+	PRINT_STR("%s\n", __FUNCTION__);
+	CHECK_ERROR(expand_package(package, expand_location, draw_package_expand));
+	return 0;
+}
+
+int do_package_rif(const char* package, char* rif_folder) {
+	int contentType = package_content_type(package);	
+	PROCESS_MENU(draw_package_rif, contentType, rif_folder);
+	return selected;
 }
 
 
