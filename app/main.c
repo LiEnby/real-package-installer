@@ -95,7 +95,7 @@ void handle_install_package(char* package, char* relPackage) {
 	
 	EnableDevPackages();
 	disable_power_off();
-	//lock_shell();
+	lock_shell();
 	
 	int res = do_package_extract(package, PKG_EXPAND_LOCATION);
 	if(res < 0) {
