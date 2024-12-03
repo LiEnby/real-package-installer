@@ -250,7 +250,7 @@ int expand_package(const char* pkg_file, const char* out_folder, void (*progress
 	progress_callback(pkg_file, (uint64_t)0, (uint64_t)100);
 	
 	CHECK_ERROR(delete_tree(out_folder));
-	CHECK_ERROR(sceIoMkdir(out_folder, 0777));
+	make_directories(out_folder);
 	CHECK_ERROR(open_pkg(&state, pkg_file));
 	
 	extract_dirname(out_folder, dirname, sizeof(dirname));
@@ -301,7 +301,7 @@ int expand_package(const char* pkg_file, const char* out_folder, void (*progress
 				break;
 			case PKG_TYPE_DIR:
 			case PKG_TYPE_PFS_DIR:
-				CHECK_ERROR(sceIoMkdir(outfile, 0777));
+				make_directories(outfile);
 				break;
 			case PKG_TYPE_SCESYS_CERT_BIN:
 			case PKG_TYPE_SCESYS_DIGS_BIN:
