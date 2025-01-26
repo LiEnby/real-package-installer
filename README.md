@@ -21,4 +21,4 @@ so if theirs is the "FAKE" one, then mine must be the real one right??
 (also developer packages are referred to as "fake packages" implying retail ones would be "real")
 
 i was considering this and "Package Installer 3.0", a reference to my first ever 'homebrew' of sorts,
-but honestly id rather dissociate myself from that mess. at the same time though, i guess everyone has to start somewhere :D
+but honestly id rather dis-associate myself from that mess. at the same time though, i guess everyone has to start somewhere :D
