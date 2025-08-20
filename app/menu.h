@@ -28,7 +28,8 @@ int do_package_rif(const char* package, char* rif_folder);
 enum select_rif_options {
 	SELECT_RIF_FILE,
 	SELECT_RIF_DIRECTORY,
-	GENERATE_NOPSPEMU_RIF
+	SCAN_DIRECTORY,
+	GENERATE_NOPSPEMU_RIF,
 };
 
 enum run_pkg_installer_options {
@@ -38,7 +39,9 @@ enum run_pkg_installer_options {
 
 enum main_menu_options {
 	INSTALL_NPDRM_PACKAGE,
+	EXPAND_NPDRM_PACKAGE,
 	CHANGE_PKG_DIRECTORY,
+	CHANGE_RIF_DIRECTORY,
 	LAUNCH_FAKE_PKG_INSTALLER
 };
 

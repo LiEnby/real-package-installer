@@ -158,8 +158,8 @@ int draw_package_rif(int* selected, int* window, int content_type, char* rif_fol
 	
 	ADDOPT(1, "★Select a Rights information file");
 	ADDOPT(1, "★Change RIF directory");
+	ADDOPT(1, "★Scan Directory for licenses matching this package.");
 	ADDOPT( (IS_PSP_CONTENT_TYPE(content_type) && (module_is_running("NoPspEmuDrm_kern")) ), "★Generate NoPspEmuDrm License");
-	
 	
 	end_draw();
 	RETURNOPT();
@@ -177,7 +177,9 @@ int draw_main_menu(int* selected, int* window, char* packageDir) {
 	DEFOPT(250);
 
 	ADDOPT(1, "★Install Package Files");
-	ADDOPT(1, "★Change package directory");
+	ADDOPT(1, "★Expand Package Files");
+	ADDOPT(1, "★Change Package directory");
+	ADDOPT(1, "★Change License directory");
 	ADDOPT(1, "★Run Sony Package Installer");
 	
 	end_draw();
@@ -215,7 +217,7 @@ int draw_select_file(int* selected, int* window, const char* input_folder, char*
 		if(i >= total_files) break;
 		
 		char file[MAX_PATH];
-		snprintf(file, sizeof(file), "%.65s", folders + (i * MAX_PATH));
+		snprintf(file, sizeof(file), "%.65s", (folders + (i * MAX_PATH)));
 		ADDOPT(1, file);
 	}
 	
@@ -302,6 +304,7 @@ int do_package_extract(const char* package, const char* expand_location) {
 
 int do_package_rif(const char* package, char* rif_folder) {
 	int contentType = package_content_type(package);	
+
 	PROCESS_MENU(draw_package_rif, contentType, rif_folder);
 	return selected;
 }

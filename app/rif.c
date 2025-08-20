@@ -43,6 +43,38 @@ int is_npdrm_free_license(const char* rif) {
 	return 0;
 }
 
+
+int find_rif(const char* content_id, const char* search_path, char* output_filepath) {
+	int totalFiles = 0;	
+	static char folders[MAX_PATH * 0x1000];
+
+	SearchFilter filter;
+	memset(&filter, 0x00, sizeof(SearchFilter));
+	filter.max_filesize = sizeof(ScePsmDrmLicense);
+	filter.file_only = 1;
+	strncpy(filter.match_extension, "*", sizeof(filter.match_extension));
+	
+	int res = get_files_in_folder(search_path, folders, &totalFiles, &filter, 0x1000);
+	if(res < 0) return res;
+
+	SceNpDrmLicense licenseBuf;
+	ScePsmDrmLicense psmLicenseBuf;
+
+	for(int i = 0; i < totalFiles; i++) {
+		strncpy(output_filepath, (folders + (i * MAX_PATH)), MAX_PATH);
+		
+		if(read_file(output_filepath, &licenseBuf, sizeof(SceNpDrmLicense)) < offsetof(SceNpDrmLicense, flags)) continue;
+		if(strncmp(content_id, licenseBuf.content_id, sizeof(licenseBuf.content_id)) == 0) return 0;
+
+		if(read_file(output_filepath, &psmLicenseBuf, sizeof(ScePsmDrmLicense)) < sizeof(ScePsmDrmLicense)) continue;
+		if(strncmp(content_id, psmLicenseBuf.content_id, sizeof(psmLicenseBuf.content_id)) == 0) return 0;
+				
+		continue;
+	}
+	
+	return -1;
+}
+
 int is_rif_required(const char* package, const char* app_directory) {
 	char workBin[MAX_PATH];
 	char tempBin[MAX_PATH];

@@ -35,6 +35,27 @@ void install_rif(char* rif, char* relRif) {
 	
 	copy_file(rif, workBin);
 }
+
+
+/*
+* fake_package_installer
+*/
+
+void launch_pkg_installer(const char* arguments) {
+	EnableDevPackages();
+	SetHost0PackageDir(G_APP_SETTINGS.PKG_INSTALL_LOCATION);
+	EnableFPkgInstallerQAF();
+
+	// run pkg installer
+	sceAppMgrLaunchAppByName(0x60000, "NPXS10031", arguments);
+	sceKernelDelayThread(1000 * 1000 * 10);
+
+	DisableFPkgInstallerQAF();
+	UnsetHost0PackageDir();	
+	DisableDevPackages();		
+}
+
+
 int handle_select_file(const char* folder, const char* extension, void (*next_step)(char*, char*)) {
 	char output[MAX_PATH];
 	int selected = -1;
@@ -54,9 +75,47 @@ int handle_select_file(const char* folder, const char* extension, void (*next_st
 	return 0;
 }
 
+void handle_change_rif() {
+	open_ime("Set Rights Information File directory", G_APP_SETTINGS.PKG_RIF_LOCATION, sizeof(G_APP_SETTINGS.PKG_RIF_LOCATION)-1);
+
+	if(!file_exist(G_APP_SETTINGS.PKG_RIF_LOCATION)) {
+		do_confirm_message_format("Directory not found!", "No folder exists at %s", G_APP_SETTINGS.PKG_RIF_LOCATION);
+		strncpy(G_APP_SETTINGS.PKG_RIF_LOCATION, DEFAULT_RIF_LOCATION, sizeof(G_APP_SETTINGS.PKG_RIF_LOCATION)-1);
+	}
+	else {
+		save_settings();
+	}
+}
+
+void handle_change_pkg() {
+	open_ime("Set package install location", G_APP_SETTINGS.PKG_INSTALL_LOCATION, sizeof(G_APP_SETTINGS.PKG_INSTALL_LOCATION)-1);
+	
+	if(!file_exist(G_APP_SETTINGS.PKG_INSTALL_LOCATION)) {
+		do_confirm_message_format("Directory not found!", "No folder exists at %s", G_APP_SETTINGS.PKG_INSTALL_LOCATION);
+		strncpy(G_APP_SETTINGS.PKG_INSTALL_LOCATION, "ux0:/package", sizeof(G_APP_SETTINGS.PKG_INSTALL_LOCATION)-1);
+	}
+	else {
+		save_settings();
+	}
+}
+
+int handle_scan_and_install_rifs(char* contentId) {
+	char sourceRifPath[MAX_PATH];
+
+	if(find_rif(contentId, G_APP_SETTINGS.PKG_RIF_LOCATION, sourceRifPath) >= 0) {
+		install_rif(sourceRifPath, NULL);
+		return 1;
+	}
+	else {
+		return 0;
+	}
+	return 0;
+}
+
 int handle_select_rif(char* package) {
 	char workBin[MAX_PATH];
-	char contentId[0x128];
+	char contentId[MAX_PATH];
+
 	snprintf(workBin, sizeof(workBin), "%s/%s", PKG_EXPAND_LOCATION, "sce_sys/package/work.bin");
 	
 	while(1) {
@@ -67,17 +126,15 @@ int handle_select_rif(char* package) {
 				if(handle_select_file(G_APP_SETTINGS.PKG_RIF_LOCATION, ".rif", install_rif) >= 0) return 0;
 				break;
 			case SELECT_RIF_DIRECTORY:
-				open_ime("Set Rights Information File directory", G_APP_SETTINGS.PKG_RIF_LOCATION, sizeof(G_APP_SETTINGS.PKG_RIF_LOCATION)-1);
-				
-				if(!file_exist(G_APP_SETTINGS.PKG_RIF_LOCATION)) {
-					do_confirm_message_format("Directory not found!", "No folder exists at %s", G_APP_SETTINGS.PKG_INSTALL_LOCATION);
-					strncpy(G_APP_SETTINGS.PKG_RIF_LOCATION, DEFAULT_RIF_LOCATION, sizeof(G_APP_SETTINGS.PKG_RIF_LOCATION)-1);
-				}
-				else {
-					save_settings();
-				}
-				
+				handle_change_rif();
 				break;
+			case SCAN_DIRECTORY:				
+				package_content_id(package, contentId, sizeof(contentId));
+				if(!handle_scan_and_install_rifs(contentId)) {
+					do_confirm_message_format("Rif not found", "Could not find a rif for game %s in %s", contentId, G_APP_SETTINGS.PKG_RIF_LOCATION);
+					break;
+				}
+				return 0;
 			case GENERATE_NOPSPEMU_RIF:
 				package_content_id(package, contentId, sizeof(contentId));
 				return make_psp_fake_rif(workBin, contentId);
@@ -90,7 +147,31 @@ int handle_select_rif(char* package) {
 	
 }
 
+void handle_expand_package(char* package, char* relPackage) {
+	char outputDirectory[MAX_PATH];
+	open_ime("Input package extract directory", outputDirectory, sizeof(outputDirectory)-1);
+	
+	
+	EnableDevPackages();
+	disable_power_off();
+	lock_shell();
+	
+	int res = do_package_extract(package, outputDirectory);
+	if(res < 0) {
+		do_confirm_message_format("Expand failed!", "The package failed to expand, (error = 0x%X)\n", res);
+		goto error;
+	}
+	
+	error:
+	DisableDevPackages();
+	enable_power_off();
+	unlock_shell();
+	
+	if(res < 0) delete_tree(PKG_EXPAND_LOCATION);
+}
+
 void handle_install_package(char* package, char* relPackage) {
+	char contentId[MAX_PATH];
 	PRINT_STR("install package: %s\n", package);
 	
 	EnableDevPackages();
@@ -103,7 +184,10 @@ void handle_install_package(char* package, char* relPackage) {
 		goto error;
 	}
 	else if(is_rif_required(package, PKG_EXPAND_LOCATION)) {
-		if(handle_select_rif(package) == OP_CANCELED) goto error;
+		package_content_id(package, contentId, sizeof(contentId));
+		if(!handle_scan_and_install_rifs(contentId)) {
+			if(handle_select_rif(package) == OP_CANCELED) goto error;
+		}
 	}
 	
 	res = do_package_install(PKG_EXPAND_LOCATION, package);
@@ -126,23 +210,6 @@ error:
 	return;
 }
 
-/*
-* fake_package_installer
-*/
-
-void launch_pkg_installer(const char* arguments) {
-	EnableDevPackages();
-	SetHost0PackageDir(G_APP_SETTINGS.PKG_INSTALL_LOCATION);
-	EnableFPkgInstallerQAF();
-
-	// run pkg installer
-	sceAppMgrLaunchAppByName(0x60000, "NPXS10031", arguments);
-	sceKernelDelayThread(1000 * 1000 * 10);
-
-	DisableFPkgInstallerQAF();
-	UnsetHost0PackageDir();	
-	DisableDevPackages();		
-}
 
 void handle_run_pkginstaller_with_arg(char* package, char* relPackage) {
 	char args[0x1028];
@@ -172,6 +239,7 @@ void handle_run_pkg_installer() {
 	};
 }
 
+
 void handle_main_menu_option() {
 	
 	int selected = -1;
@@ -180,17 +248,14 @@ void handle_main_menu_option() {
 		case INSTALL_NPDRM_PACKAGE:
 			handle_select_file(G_APP_SETTINGS.PKG_INSTALL_LOCATION, ".pkg", handle_install_package);
 			break;
+		case EXPAND_NPDRM_PACKAGE:
+			handle_select_file(G_APP_SETTINGS.PKG_INSTALL_LOCATION, ".pkg", handle_expand_package);
+			break;
+		case CHANGE_RIF_DIRECTORY:
+			handle_change_rif();
+			break;
 		case CHANGE_PKG_DIRECTORY:
-			open_ime("Set package install location", G_APP_SETTINGS.PKG_INSTALL_LOCATION, sizeof(G_APP_SETTINGS.PKG_INSTALL_LOCATION)-1);
-			
-			if(!file_exist(G_APP_SETTINGS.PKG_INSTALL_LOCATION)) {
-				do_confirm_message_format("Directory not found!", "No folder exists at %s", G_APP_SETTINGS.PKG_INSTALL_LOCATION);
-				strncpy(G_APP_SETTINGS.PKG_INSTALL_LOCATION, "ux0:/package", sizeof(G_APP_SETTINGS.PKG_INSTALL_LOCATION)-1);
-			}
-			else {
-				save_settings();
-			}
-			
+			handle_change_pkg();
 			break;
 		case LAUNCH_FAKE_PKG_INSTALLER:
 			handle_run_pkg_installer();
