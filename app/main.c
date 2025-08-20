@@ -148,7 +148,7 @@ int handle_select_rif(char* package) {
 }
 
 void handle_expand_package(char* package, char* relPackage) {
-	char outputDirectory[MAX_PATH];
+	char outputDirectory[MAX_PATH] = "ux0:/expand";
 	open_ime("Input package extract directory", outputDirectory, sizeof(outputDirectory)-1);
 	
 	
