@@ -36,18 +36,18 @@ int need_promote(int content_type) {
 		case PKG_TYPE_UNK_13:
 		case PKG_TYPE_VITA_LIVEAREA:
 			return 0;
-		case PKG_TYPE_PSX:
-		case PKG_TYPE_PSP:
-		case PKG_TYPE_PSP_GO:
-		case PKG_TYPE_PSP_MINIS:
+		case PKG_TYPE_PSX:			
+		case PKG_TYPE_PSP:			
+		case PKG_TYPE_PSP_GO:		
+		case PKG_TYPE_PSP_MINIS:	
 		case PKG_TYPE_PSP_NEO_GEO:	
-		case PKG_TYPE_VITA_APP:
-		case PKG_TYPE_VITA_DLC:
-		case PKG_TYPE_VITA_THEME:
-		case PKG_TYPE_PSM:
-		case PKG_TYPE_PSM_UNITY:
-		default: 
-			return 1;
+		case PKG_TYPE_VITA_APP:		
+		case PKG_TYPE_VITA_DLC:		
+		case PKG_TYPE_VITA_THEME:	
+		case PKG_TYPE_PSM:			
+		case PKG_TYPE_PSM_UNITY:	
+		default:					
+			return 1;				
 	}
 }
 
@@ -99,7 +99,7 @@ const char* find_promote_location(int content_type) {
 	
 }
 
-int loadScePaf() {
+int load_sce_paf() {
 	static uint32_t argp[] = { 0x180000, -1, -1, 1, -1, -1 };
 	int res = -1;
 
@@ -112,10 +112,46 @@ int loadScePaf() {
 	return sceSysmoduleLoadModuleInternalWithArg(SCE_SYSMODULE_INTERNAL_PAF, sizeof(argp), argp, &opt);
 }
 
-int unloadScePaf() {
+int unload_sce_paf() {
 	SceSysmoduleOpt opt;
 	memset(&opt, 0, sizeof(opt));
 	return sceSysmoduleUnloadModuleInternalWithArg(SCE_SYSMODULE_INTERNAL_PAF, 0, NULL, &opt);
+}
+
+int promote_cma(const char *path, const char *titleid, int type, void (*progress_callback)(const char*, uint64_t, uint64_t)) {
+  
+  ScePromoterUtilityImportParams promote_args;
+  memset(&promote_args,0x00,sizeof(ScePromoterUtilityImportParams));
+  strncpy(promote_args.path, path, sizeof(promote_args.path)-1);
+  strncpy(promote_args.titleid, titleid, sizeof(promote_args.titleid)-1);
+  promote_args.type = type;
+  promote_args.attribute = 0x1;
+  
+  uint64_t done = 0;
+  uint64_t total = 7;
+
+  CHECK_ERROR(load_sce_paf());
+  progress_callback(path, done++, total);
+  
+  CHECK_ERROR(sceSysmoduleLoadModuleInternal(SCE_SYSMODULE_INTERNAL_PROMOTER_UTIL));
+  progress_callback(path, done++, total);
+  
+  CHECK_ERROR(scePromoterUtilityInit());
+  progress_callback(path, done++, total);
+  
+  CHECK_ERROR(scePromoterUtilityPromoteImport(&promote_args));
+  progress_callback(path, done++, total);
+  
+  CHECK_ERROR(scePromoterUtilityExit());
+  progress_callback(path, done++, total);
+  
+  CHECK_ERROR(sceSysmoduleUnloadModuleInternal(SCE_SYSMODULE_INTERNAL_PROMOTER_UTIL));
+  progress_callback(path, done++, total);
+  
+  CHECK_ERROR(unload_sce_paf());
+  progress_callback(path, done++, total);
+
+  return 0;
 }
 
 int promote(const char *path, void (*progress_callback)(const char*, uint64_t, uint64_t)) {
@@ -125,7 +161,7 @@ int promote(const char *path, void (*progress_callback)(const char*, uint64_t, u
 	uint64_t done = 0;
 	uint64_t total = 8;
 	
-	CHECK_ERROR(loadScePaf());
+	CHECK_ERROR(load_sce_paf());
 	progress_callback(path, done++, total);
 	
 	CHECK_ERROR(sceSysmoduleLoadModuleInternal(SCE_SYSMODULE_INTERNAL_PROMOTER_UTIL));
@@ -150,7 +186,7 @@ int promote(const char *path, void (*progress_callback)(const char*, uint64_t, u
 	CHECK_ERROR(sceSysmoduleUnloadModuleInternal(SCE_SYSMODULE_INTERNAL_PROMOTER_UTIL));
 	progress_callback(path, done++, total);
 	
-	CHECK_ERROR(unloadScePaf());
+	CHECK_ERROR(unload_sce_paf());
 	progress_callback(path, done++, total);
 
 	return 0;
@@ -158,12 +194,12 @@ int promote(const char *path, void (*progress_callback)(const char*, uint64_t, u
 
 int is_app_installed(const char* title_id) {
 	int unk = -1;
-	CHECK_ERROR(loadScePaf());
+	CHECK_ERROR(load_sce_paf());
 	CHECK_ERROR(sceSysmoduleLoadModuleInternal(SCE_SYSMODULE_INTERNAL_PROMOTER_UTIL));	
 	CHECK_ERROR(scePromoterUtilityInit());
 	int exist = scePromoterUtilityCheckExist(title_id, &unk);
 	CHECK_ERROR(scePromoterUtilityExit());	
 	CHECK_ERROR(sceSysmoduleUnloadModuleInternal(SCE_SYSMODULE_INTERNAL_PROMOTER_UTIL));	
-	CHECK_ERROR(unloadScePaf());
+	CHECK_ERROR(unload_sce_paf());
 	return (exist >= 0);
 }

@@ -40,6 +40,7 @@ add_executable(${PROJECT_NAME}
 	promote.c
 	rif.c
 	ime.c
+	sha256.c
 	bgm.cpp
 )
 

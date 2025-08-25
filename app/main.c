@@ -114,7 +114,7 @@ int handle_scan_and_install_rifs(char* contentId) {
 
 int handle_select_rif(char* package) {
 	char workBin[MAX_PATH];
-	char contentId[MAX_PATH];
+	char contentId[0x30];
 
 	snprintf(workBin, sizeof(workBin), "%s/%s", PKG_EXPAND_LOCATION, "sce_sys/package/work.bin");
 	
@@ -148,8 +148,14 @@ int handle_select_rif(char* package) {
 }
 
 void handle_expand_package(char* package, char* relPackage) {
-	char outputDirectory[MAX_PATH] = "ux0:/expand";
-	open_ime("Input package extract directory", outputDirectory, sizeof(outputDirectory)-1);
+	char selectedDirectory[MAX_PATH] = "ux0:/expand";
+	char contentId[0x30];
+	char outputDirectory[MAX_PATH*2];
+	
+	package_content_id(package, contentId, sizeof(contentId));
+	open_ime("Input package extract directory", selectedDirectory, sizeof(selectedDirectory)-1);
+
+	snprintf(outputDirectory, sizeof(outputDirectory), "%s/%s", selectedDirectory, contentId); 
 	
 	
 	EnableDevPackages();
@@ -171,7 +177,7 @@ void handle_expand_package(char* package, char* relPackage) {
 }
 
 void handle_install_package(char* package, char* relPackage) {
-	char contentId[MAX_PATH];
+	char contentId[0x30];
 	PRINT_STR("install package: %s\n", package);
 	
 	EnableDevPackages();
