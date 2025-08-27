@@ -14,7 +14,7 @@ include("$ENV{VITASDK}/share/vita.cmake" REQUIRED)
 set(VITA_APP_NAME "★RealPackage Installer")
 set(VITA_TITLEID  "RPKG10031")
 
-set(VITA_VERSION  "01.01")
+set(VITA_VERSION  "01.02")
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")

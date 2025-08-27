@@ -2,7 +2,7 @@ real_pkg_installer_helper:
   attributes: 0
   version:
     major: 1
-    minor: 1
+    minor: 2
   main:
     start: module_start
     stop: module_stop
