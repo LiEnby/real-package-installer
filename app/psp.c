@@ -8,36 +8,6 @@
 #include "log.h"
 #include "io.h"
 
-int custom_promote_psp(const char* pkg_path, const char* promote_path) {	
-	char eboot_pbp_path[MAX_PATH];
-	char license_path[MAX_PATH];
-	
-	// move folders over to here
-	char src_game_folder[MAX_PATH];
-	char dst_game_folder[MAX_PATH];
-	char src_license_file[MAX_PATH];
-	char dst_license_file[MAX_PATH];
-	
-	char disc_id[0x10]
-	char content_id[0x20];
-	
-	uint8_t pbp_hash[0x20];
-	uint8_t eboot_signature[0x200];
-	
-	snprintf(eboot_pbp_path, sizeof(eboot_pbp_path), "%s/USRDIR/CONTENT/EBOOT.PBP", pkg_path);
-	gen_sce_ebootpbp(eboot_pbp_path, pkg_path);
-	
-	snprintf(src_game_folder, sizeof(src_game_folder), "%s/USRDIR/CONTENT", pkg_path);
-	snprintf(dst_game_folder, sizeof(dst_game_folder), "%s/PSP/GAME/%s", promote_location, disc_id);
-
-	snprintf(src_license_file, sizeof(src_license_file), "%s/sce_sys/package/work.bin", pkg_path);
-	snprintf(dst_license_file, sizeof(dst_license_file), "%s/PSP/LICENSE/%s.rif", promote_location, content_id);
-	
-	
-	
-	return 0;
-}
-
 int read_content_id_data_psp(SceUID pbp_fd, char* content_id) {
   DataPspHeader data_psp_header;
 
@@ -185,6 +155,20 @@ int get_pbp_content_id(const char* pbp_file, char* content_id) {
   
 }
 
+int hash_pbpfile(const char* eboot_file, uint8_t* out_hash) {
+  int res = -1;
+  
+  if(eboot_file != NULL && out_hash != NULL) {
+    SceUID pbp_fd = sceIoOpen(eboot_file, SCE_O_RDONLY, 0777);
+    if(pbp_fd < 0) return -1;
+    res = hash_pbp(pbp_fd, out_hash);
+	
+    sceIoClose(pbp_fd);	
+  }
+  
+  return res;
+}
+
 int hash_pbp(SceUID pbp_fd, char* out_hash) {
   char wbuf[0x7c0]; 
   
@@ -222,10 +206,10 @@ int hash_pbp(SceUID pbp_fd, char* out_hash) {
   
   sha256_final(&ctx, out_hash);
   
-  return 1;
+  return 0;
 }
 
-int gen_sce_ebootpbp(const char* pbp_file, const char* psp_game_folder){
+int gen_sce_ebootpbp(const char* pbp_file, const char* psp_game_folder) {
   int res = 0;
   
   char pbp_hash[0x20];

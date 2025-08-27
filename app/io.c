@@ -200,6 +200,8 @@ int write_file(const char* path, const void* data, size_t size) {
 	make_directories(outdir);
 	
 	SceUID wfd = sceIoOpen(path, SCE_O_WRONLY | SCE_O_CREAT, 0777);
+	if(wfd < 0) ERROR(wfd);
+	
 	if(wfd > 0) {
 		ret = sceIoWrite(wfd, data, size);
 		if(ret < 0) goto error;
@@ -252,7 +254,7 @@ void make_directories(const char* path) {
 			strncpy(dirname, path, i);
 
 			if(!file_exist(dirname)){
-				PRINT_STR("Creating Directory directory: %s\n", dirname);
+				PRINT_STR("Creating Directory: %s\n", dirname);
 				sceIoMkdir(dirname, 0777);
 			}	
 		}

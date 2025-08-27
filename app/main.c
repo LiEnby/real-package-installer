@@ -212,7 +212,7 @@ error:
 	enable_power_off();
 	unlock_shell();
 	
-	delete_tree(PKG_EXPAND_LOCATION);
+	//delete_tree(PKG_EXPAND_LOCATION);
 	return;
 }
 
