@@ -299,7 +299,7 @@ int do_package_install(const char* expand_location, const char* package) {
 	
 	if(res != 0)
 	{
-		//delete_tree(promote_location);
+		delete_tree(promote_location);
 	}
 
 	return res;

@@ -138,7 +138,7 @@ int promote_custom_psp(const char* pkg_path, void (*progress_callback)(const cha
 	char disc_id[0x10];
 	char content_id[0x30];
 	
-	progress_callback(pkg_path, 0, 1);
+	progress_callback(PROMOTE_PSP, 0, 1);
 
 	snprintf(eboot_pbp_path, sizeof(eboot_pbp_path), "%s/USRDIR/CONTENT/EBOOT.PBP", pkg_path);
 	PRINT_STR("eboot.pbp path: %s\n", eboot_pbp_path);
@@ -191,7 +191,7 @@ int promote_custom_psp(const char* pkg_path, void (*progress_callback)(const cha
 			if(ret < 0) return ret;
 			
 
-			ret = promote_cma(dst_game_folder, disc_id, SCE_PKG_TYPE_PSP, progress_callback);
+			ret = promote_cma(PROMOTE_PSP, disc_id, SCE_PKG_TYPE_PSP, progress_callback);
 			return ret;
 		}
 	}
@@ -210,7 +210,8 @@ int promote_cma(const char *path, const char *titleid, int type, void (*progress
   strncpy(promote_args.path, path, sizeof(promote_args.path)-1);
   strncpy(promote_args.titleid, titleid, sizeof(promote_args.titleid)-1);
   promote_args.type = type;
-  promote_args.attribute = 0x1;
+  promote_args.attribute = 0x01;
+  
   
   uint64_t done = 0;
   uint64_t total = 7;
