@@ -42,6 +42,9 @@ add_executable(${PROJECT_NAME}
 	app/main.c
 	app/menu.c
 	app/pkg.c
+	app/sfo.c
+	app/psp.c
+	app/sha256.c
 	app/promote.c
 	app/rif.c
 	app/ime.c

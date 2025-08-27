@@ -18,7 +18,10 @@ int make_psp_fake_rif(const char* rif, const char* content_id) {
 	memset(licenseBuf.ecdsa_signature, 0xFF, 0x28);
 	strncpy(licenseBuf.content_id, content_id, 0x30);
 	
-	return (write_file(rif, &licenseBuf, sizeof(SceNpDrmLicense)) > 0);
+	PRINT_STR("Writing: %s\n", rif);
+	PRINT_STR("ContentID: %s\n", content_id);
+	
+	return (write_file(rif, &licenseBuf, offsetof(SceNpDrmLicense, flags)) > 0);
 }
 
 int is_zeroed_license(const char* rif) {

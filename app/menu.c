@@ -285,14 +285,23 @@ int do_package_install(const char* expand_location, const char* package) {
 	
 	int res = delete_tree(promote_location);
 	if(res >= 0) {
-		res = sceIoRename(expand_location, promote_location);
 		if(need_promote(contentType) && res >= 0) {
-			res = promote(promote_location, draw_package_promote);
-		}
-		else {
-			delete_tree(promote_location);
+			// workaround psp needing stat.bin
+			if(IS_PSP_CONTENT_TYPE(contentType)) { 
+				res = promote_custom_psp(expand_location, draw_package_promote);
+			}
+			else {
+				res = sceIoRename(expand_location, promote_location);
+				res = promote(promote_location, draw_package_promote);
+			}
 		}
 	}
+	
+	if(res != 0)
+	{
+		delete_tree(promote_location);
+	}
+
 	return res;
 }
 
