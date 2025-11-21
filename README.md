@@ -3,11 +3,11 @@
 This is a homebrew for installing .PKG files onto your vita,
 unlike the SCE Package installer this also allows you to specify a RIF for content that requires a license.
 
-It looks for package files in ux0:/package 
-and for rif files associated with those packages (if npdrm-bind) in ux0:/rif.
-
 but unlike the offical package installer, 
 this also works with NpDrm-Bind (you can specify a rif from ux0:/rif ..) as well as NpDrm-Free contents.
+
+It looks for package files in ux0:/package 
+and for rif files associated with those packages (if npdrm-bind) in ux0:/rif.
 
 NOTE: as there are alot of package types it has not been tested with all of them, (mainly just Vita/Patch/PSM) 
 so there may be some issues with different package types. 
