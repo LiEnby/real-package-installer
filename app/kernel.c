@@ -29,7 +29,7 @@ void load_kernel_modules() {
 		sceAppMgrAppParamGetString(0, 12, titleid , 256);
 
 		
-		// load f00dbridge
+		// load gckernkit
 		snprintf(kplugin_path, sizeof(kplugin_path), "ux0:app/%s/kplugin.skprx", titleid);
 		int uid = taiLoadStartKernelModule(kplugin_path, 0, NULL, 0);
 		PRINT_STR("start %s = %x\n", kplugin_path, uid);

@@ -58,20 +58,24 @@ int find_rif(const char* content_id, const char* search_path, char* output_filep
 	strncpy(filter.match_extension, "*", sizeof(filter.match_extension));
 	
 	int res = get_files_in_folder(search_path, folders, &totalFiles, &filter, 0x1000);
-	if(res < 0) return res;
+	if (res < 0) return res;
 
 	SceNpDrmLicense licenseBuf;
 	ScePsmDrmLicense psmLicenseBuf;
 
 	for(int i = 0; i < totalFiles; i++) {
-		strncpy(output_filepath, (folders + (i * MAX_PATH)), MAX_PATH);
+		snprintf(output_filepath, MAX_PATH, "%s/%s", search_path, (folders + (i * MAX_PATH)));
+		PRINT_STR("searching: %s\n", output_filepath);
+		PRINT_STR("Find cid: %s\n", content_id);
 		
 		if(read_file(output_filepath, &licenseBuf, sizeof(SceNpDrmLicense)) < offsetof(SceNpDrmLicense, flags)) continue;
+		PRINT_STR("read cid: %s\n", licenseBuf.content_id);
 		if(strncmp(content_id, licenseBuf.content_id, sizeof(licenseBuf.content_id)) == 0) return 0;
 
 		if(read_file(output_filepath, &psmLicenseBuf, sizeof(ScePsmDrmLicense)) < sizeof(ScePsmDrmLicense)) continue;
+		PRINT_STR("read cid psm: %s\n", psmLicenseBuf.content_id);
 		if(strncmp(content_id, psmLicenseBuf.content_id, sizeof(psmLicenseBuf.content_id)) == 0) return 0;
-				
+			
 		continue;
 	}
 	

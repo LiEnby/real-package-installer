@@ -231,14 +231,13 @@ error:
 int extract_dirname(const char* path, char* dirname, int dirname_length) {
 	strncpy(dirname, path, dirname_length);
 	
-	
-	int lastSlash = 0;
+	int last_slash = 0;
 	for(int i = 0; i < strlen(path); i++) {
-		if(path[i] == '/' || path[i] == '\\') lastSlash = i;
+		if(path[i] == '/' || path[i] == '\\') last_slash = i;
 	}
 	
-	dirname[lastSlash] = 0;
-	return lastSlash;
+	dirname[last_slash] = 0;
+	return last_slash;
 }
 
 void make_directories(const char* path) {
